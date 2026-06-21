@@ -12,9 +12,16 @@ Stream anime from your terminal.
 ## Install
 
 ```bash
+pip install aniterm           # from PyPI
+pip install curl_cffi         # needed by yt-dlp for Cloudflare bypass
+```
+
+Or run directly from the repo:
+
+```bash
+git clone https://github.com/amalxloop/aniterm.git
 pip install curl_cffi
-chmod +x aniterm
-ln -s "$PWD/aniterm" ~/.local/bin/aniterm
+./aniterm/aniterm
 ```
 
 ## Usage
