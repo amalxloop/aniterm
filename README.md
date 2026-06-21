@@ -1,4 +1,4 @@
-# aniterm
+# Aniterm
 
 Stream anime from your terminal.
 
