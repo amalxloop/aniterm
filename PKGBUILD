@@ -1,4 +1,4 @@
-# Maintainer: amalxloop <amalrockz568@gmail.com>
+# Maintainer: amalxloop 
 
 pkgname=aniterm
 pkgver=1.0.0
