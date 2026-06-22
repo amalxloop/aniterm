@@ -146,6 +146,7 @@ def play_episode(stream_url, title=None):
     proxy_url = make_proxy_url(stream_url)
     cmd = [
         "mpv", proxy_url,
+        "--msg-level=all=info",
         "--ytdl-format=bestvideo+bestaudio/best",
         "--ytdl-raw-options=impersonate=Chrome-142",
     ]
