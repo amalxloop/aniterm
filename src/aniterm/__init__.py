@@ -1,9 +1,15 @@
 import json, shutil, subprocess, sys, time, urllib.parse, urllib.request
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
+_X = bytes([0xa3, 0x7f, 0x4b, 0xd9, 0x15, 0x82, 0xec, 0x56])
+
+def _x(s):
+    d = bytes.fromhex(s)
+    return bytes(d[i] ^ _X[i & 7] for i in range(len(d))).decode()
+
 ANILIST_API = "https://graphql.anilist.co"
-VIDNEST_API = "https://new.vidnest.fun/hianime/anime"
-VIDNEST_ALPHABET = "RB0fpH8ZEyVLkv7c2i6MAJ5u3IKFDxlS1NTsnGaqmXYdUrtzjwObCgQP94hoeW+/="
+VIDNEST_API = _x("cb0b3fa966b8c379cd1a3cf763eb8838c60c3ff773f78279cb162ab77cef8979c21122b470")
+VIDNEST_ALPHABET = _x("f13d7bbf65cad40ce6061d957ef4db3591167d9454c8d9239036009f51fa800592311faa7bc58d27ce2712bd40f0982cc90804bb56e5bd069a4b23b670d5c7799e")
 
 STYLE_BOLD = "\033[1m"
 STYLE_DIM = "\033[2m"
@@ -103,11 +109,10 @@ def decrypt_vidnest(data):
 
 def fetch_episode_sources(anilist_id, episode, sub_or_dub="sub"):
     url = f"{VIDNEST_API}/{anilist_id}/{episode}/{sub_or_dub.lower()}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
-        "Origin": "https://vidnest.fun",
-        "Referer": "https://vidnest.fun/",
-    }
+    ua = _x("ee1031b079ee8d7996517bf93dd58538c7103caa35ccb876924f65e92ea2bb3fcd497fe235fada62985f39af2fb3df618d4f62f952e78f3dcc5079e924b2dc67934e6b9f7cf08930cc0764e826b5c266")
+    ori = _x("cb0b3fa966b8c379d5162fb770f19878c50a25")
+    ref = _x("cb0b3fa966b8c379d5162fb770f19878c50a25f6")
+    headers = {"User-Agent": ua, "Origin": ori, "Referer": ref}
     for attempt in range(3):
         try:
             req = urllib.request.Request(url, headers=headers)
@@ -122,21 +127,25 @@ def fetch_episode_sources(anilist_id, episode, sub_or_dub="sub"):
 
 
 def make_proxy_url(stream_url):
+    ua = _x("ee1031b079ee8d7996517bf93dd58538c7103caa35ccb876924f65e92ea2bb3fcd497fe235fada62985f39af2fb3df618d4f62f952e78f3dcc5079e924b2dc67934e6b9f7cf08930cc0764e826b5c266")
+    ori = _x("cb0b3fa966b8c379ce1a2cb865ee8d2f8d1d3ea36f")
+    ref = _x("cb0b3fa966b8c379ce1a2cb865ee8d2f8d1d3ea36fad")
     proxy_headers = {
-        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
+        "user-agent": ua,
         "accept": "*/*",
         "accept-language": "en-US,en;q=0.5",
         "sec-fetch-dest": "empty",
         "sec-fetch-mode": "cors",
         "sec-fetch-site": "cross-site",
-        "origin": "https://megaplay.buzz",
-        "referer": "https://megaplay.buzz/",
+        "origin": ori,
+        "referer": ref,
     }
     params = urllib.parse.urlencode({
         "url": stream_url,
         "headers": json.dumps(proxy_headers, separators=(",", ":")),
     })
-    return f"https://megacloud.animanga.fun/proxy?{params}"
+    base = _x("cb0b3fa966b8c379ce1a2cb876ee8323c7512ab77cef8d38c41e65bf60ecc326d11033a0")
+    return f"{base}?{params}"
 
 
 def play_episode(stream_url, title=None):
