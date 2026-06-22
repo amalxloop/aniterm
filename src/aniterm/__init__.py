@@ -1,4 +1,4 @@
-import json, shutil, subprocess, sys, urllib.parse, urllib.request
+import json, shutil, subprocess, sys, time, urllib.parse, urllib.request
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 ANILIST_API = "https://graphql.anilist.co"
@@ -103,13 +103,22 @@ def decrypt_vidnest(data):
 
 def fetch_episode_sources(anilist_id, episode, sub_or_dub="sub"):
     url = f"{VIDNEST_API}/{anilist_id}/{episode}/{sub_or_dub.lower()}"
-    req = urllib.request.Request(url, headers={
+    headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
         "Origin": "https://vidnest.fun",
         "Referer": "https://vidnest.fun/",
-    })
-    with urllib.request.urlopen(req) as r:
-        return decrypt_vidnest(json.loads(r.read()))
+    }
+    for attempt in range(3):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as r:
+                return decrypt_vidnest(json.loads(r.read()))
+        except urllib.error.HTTPError as e:
+            if e.code == 502 and attempt < 2:
+                eprint(f"  {STYLE_YELLOW}502, retrying...{STYLE_RESET}")
+                time.sleep(2 ** attempt)
+                continue
+            raise
 
 
 def make_proxy_url(stream_url):
