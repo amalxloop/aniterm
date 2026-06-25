@@ -8,6 +8,7 @@ Stream anime from your terminal.
 - **yt-dlp** — streaming
 - **curl_cffi** — `pip install curl_cffi`
 - **python3**
+- **fzf** — recommended for scrollable episode browser
 
 ## Install
 
@@ -28,7 +29,7 @@ pip install curl_cffi
 
 ```
 aniterm <query>                   Search anime
-aniterm <id>                      Browse episodes interactively
+aniterm <id>                      Browse episodes (fzf if installed)
 aniterm <id> <ep>                 Play episode (subbed)
 aniterm <id> <ep> -dub            Play dubbed episode
 aniterm <id> <ep> -n              Next/prev prompt after playback

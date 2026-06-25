@@ -305,52 +305,45 @@ def cmd_info(anilist_id, args):
     if ep is None:
         print(f"  {STYLE_DIM}(Episode count unknown - specify episode number directly){STYLE_RESET}")
         return
-    if ep > 500:
-        per_page = 50
-    elif ep > 100:
-        per_page = 30
-    else:
-        per_page = 24
-    total_pages = (ep + per_page - 1) // per_page
-    page = 0
+
+    has_fzf = shutil.which("fzf")
     while True:
-        start = page * per_page + 1
-        end = min(start + per_page - 1, ep)
-        cols = 10 if per_page >= 30 else 8
-        print(f"\n{STYLE_DIM}Episodes {start}-{end}/{ep} (page {page+1}/{total_pages}){STYLE_RESET}")
-        for i in range(start, end + 1):
-            print(f"{STYLE_GREEN}{i:>6}{STYLE_RESET}", end="")
-            if (i - start + 1) % cols == 0:
+        if has_fzf:
+            lines = [f"{i:>{len(str(ep))}}" for i in range(1, ep + 1)]
+            result = subprocess.run(
+                ["fzf", "--prompt", "Episode> ", "--header", f"{title} (1-{ep})",
+                 "--bind", "ctrl-c:abort,esc:abort",
+                 "--height", "80%", "--reverse"],
+                input="\n".join(lines), capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                break
+            sel = result.stdout.strip()
+            if not sel:
+                continue
+            target = int(sel)
+            sd = "dub" if args.dub else "sub"
+            try_play(anilist_id, target, sd)
+        else:
+            cols = 8
+            for i in range(1, ep + 1):
+                print(f"{STYLE_GREEN}{i:>4}{STYLE_RESET}", end="")
+                if i % cols == 0:
+                    print()
+            if ep % cols != 0:
                 print()
-        if (end - start + 1) % cols != 0:
-            print()
-        try:
-            c = input(f"\n{STYLE_BOLD}[n]ext  [p]rev  /<num>  <ep# to play>  [Enter=q]: {STYLE_RESET}").strip()
-        except (EOFError, KeyboardInterrupt):
-            break
-        if c == "" or c == "q":
-            break
-        elif c == "n":
-            page = min(page + 1, total_pages - 1)
-        elif c == "p":
-            page = max(0, page - 1)
-        elif c.startswith("/"):
-            c = c[1:].strip()
-            if c.isdigit():
-                target = int(c)
-                if 1 <= target <= ep:
-                    page = (target - 1) // per_page
-                else:
-                    eprint(f"{STYLE_RED}Invalid (1-{ep}).{STYLE_RESET}")
-            continue
-        elif c.isdigit():
+            try:
+                c = input(f"\n{STYLE_BOLD}Episode to play (Enter=q): {STYLE_RESET}").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if c == "" or not c.isdigit():
+                break
             target = int(c)
-            if 1 <= target <= ep:
-                sd = "dub" if args.dub else "sub"
-                try_play(anilist_id, target, sd)
-            else:
+            if target < 1 or target > ep:
                 eprint(f"{STYLE_RED}Invalid (1-{ep}).{STYLE_RESET}")
                 continue
+            sd = "dub" if args.dub else "sub"
+            try_play(anilist_id, target, sd)
 
 
 def cmd_interactive(args):
@@ -386,21 +379,46 @@ def cmd_interactive(args):
             ep = int(ep) if ep else 1
         except (EOFError, KeyboardInterrupt):
             print(); sys.exit(0)
-    else:
-        try:
-            ep = input(f"{STYLE_BOLD}Episode (1-{total}, Enter=1): {STYLE_RESET}").strip()
-            ep = int(ep) if ep else 1
-        except (EOFError, KeyboardInterrupt):
-            print(); sys.exit(0)
-        if ep < 1 or ep > total:
-            eprint(f"{STYLE_RED}Invalid (1-{total}).{STYLE_RESET}"); sys.exit(1)
+        sd = "dub" if args.dub else "sub"
+        play(anilist_id, ep, sd, loop=True)
+        return
+
     try:
         sd = input(f"{STYLE_BOLD}Type (sub/dub, Enter=sub): {STYLE_RESET}").strip().lower() or "sub"
     except (EOFError, KeyboardInterrupt):
         print(); sys.exit(0)
     if sd not in ("sub", "dub"):
         sd = "sub"
-    play(anilist_id, ep, sd, loop=True)
+
+    has_fzf = shutil.which("fzf")
+    title = fmt_title(media)
+    while True:
+        if has_fzf:
+            lines = [f"{i:>{len(str(total))}}" for i in range(1, total + 1)]
+            result = subprocess.run(
+                ["fzf", "--prompt", "Episode> ", "--header", f"{title} (1-{total})",
+                 "--bind", "ctrl-c:abort,esc:abort",
+                 "--height", "80%", "--reverse"],
+                input="\n".join(lines), capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                break
+            sel = result.stdout.strip()
+            if not sel:
+                continue
+            ep = int(sel)
+        else:
+            try:
+                ep_input = input(f"{STYLE_BOLD}Episode (1-{total}, Enter=q): {STYLE_RESET}").strip()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if ep_input == "" or not ep_input.isdigit():
+                break
+            ep = int(ep_input)
+            if ep < 1 or ep > total:
+                eprint(f"{STYLE_RED}Invalid (1-{total}).{STYLE_RESET}")
+                continue
+        try_play(anilist_id, ep, sd)
 
 
 def main():
