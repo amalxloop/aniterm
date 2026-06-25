@@ -37,8 +37,16 @@ def anilist_query(query, variables=None):
             "User-Agent": "aniterm/1.0",
         },
     )
-    with urllib.request.urlopen(req) as r:
-        return json.loads(r.read())
+    try:
+        with urllib.request.urlopen(req) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()
+        if "1101" in body:
+            eprint(f"{STYLE_RED}AniList rate limit hit. Wait a moment and try again.{STYLE_RESET}")
+        else:
+            eprint(f"{STYLE_RED}AniList error ({e.code}). Try again later.{STYLE_RESET}")
+        sys.exit(1)
 
 
 def search_anime(search_term, page=1, per_page=20):
