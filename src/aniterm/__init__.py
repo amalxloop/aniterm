@@ -273,8 +273,26 @@ def cmd_search(args):
     if not results:
         eprint(f"{STYLE_YELLOW}No results for '{q}'.{STYLE_RESET}")
         sys.exit(1)
-    for i, m in enumerate(results, 1):
-        print(f"{STYLE_CYAN}{i:>3}.{STYLE_RESET} {fmt_compact(m)}")
+    has_fzf = shutil.which("fzf")
+    if has_fzf:
+        lines = [fmt_compact(m) for m in results]
+        result = subprocess.run(
+            ["fzf", "--prompt", "Anime> ", "--header", f'Search: "{q}"',
+             "--with-nth", "2..", "--delimiter", " ",
+             "--bind", "ctrl-c:abort,esc:abort",
+             "--height", "80%", "--reverse"],
+            input="\n".join(lines), capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            sys.exit(0)
+        sel = result.stdout.strip()
+        if not sel:
+            sys.exit(0)
+        anilist_id = int(sel.split()[0])
+        cmd_info(anilist_id, args)
+    else:
+        for i, m in enumerate(results, 1):
+            print(f"{STYLE_CYAN}{i:>3}.{STYLE_RESET} {fmt_compact(m)}")
 
 
 def cmd_info(anilist_id, args):
@@ -346,17 +364,39 @@ def cmd_interactive(args):
         if not results:
             eprint(f"{STYLE_YELLOW}No results.{STYLE_RESET}")
             sys.exit(1)
-        for i, m in enumerate(results, 1):
-            print(f"{STYLE_CYAN}{i:>3}.{STYLE_RESET} {fmt_compact(m)}")
-        try:
-            c = input(f"\n{STYLE_BOLD}Select (1-{len(results)}): {STYLE_RESET}").strip()
-        except (EOFError, KeyboardInterrupt):
-            print(); sys.exit(0)
-        if not c.isdigit() or int(c) < 1 or int(c) > len(results):
-            eprint(f"{STYLE_RED}Invalid.{STYLE_RESET}"); sys.exit(1)
-        media = results[int(c) - 1]
-        anilist_id = media["id"]
-        total = get_episode_count(media)
+        has_fzf = shutil.which("fzf")
+        if has_fzf:
+            lines = [fmt_compact(m) for m in results]
+            result = subprocess.run(
+                ["fzf", "--prompt", "Anime> ", "--header", f'Search: "{q}"',
+                 "--with-nth", "2..", "--delimiter", " ",
+                 "--bind", "ctrl-c:abort,esc:abort",
+                 "--height", "80%", "--reverse"],
+                input="\n".join(lines), capture_output=True, text=True,
+            )
+            if result.returncode != 0:
+                sys.exit(0)
+            sel = result.stdout.strip()
+            if not sel:
+                sys.exit(0)
+            anilist_id = int(sel.split()[0])
+            media = get_anime_info(anilist_id)
+            if not media:
+                eprint(f"{STYLE_RED}ID {anilist_id} not found.{STYLE_RESET}")
+                sys.exit(1)
+            total = get_episode_count(media)
+        else:
+            for i, m in enumerate(results, 1):
+                print(f"{STYLE_CYAN}{i:>3}.{STYLE_RESET} {fmt_compact(m)}")
+            try:
+                c = input(f"\n{STYLE_BOLD}Select (1-{len(results)}): {STYLE_RESET}").strip()
+            except (EOFError, KeyboardInterrupt):
+                print(); sys.exit(0)
+            if not c.isdigit() or int(c) < 1 or int(c) > len(results):
+                eprint(f"{STYLE_RED}Invalid.{STYLE_RESET}"); sys.exit(1)
+            media = results[int(c) - 1]
+            anilist_id = media["id"]
+            total = get_episode_count(media)
     else:
         anilist_id = args.id
         media = get_anime_info(anilist_id)
