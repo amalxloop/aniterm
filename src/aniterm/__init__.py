@@ -22,11 +22,22 @@ STYLE_RED = "\033[91m"
 STYLE_RESET = "\033[0m"
 
 
+_anilist_cache = {}
+_last_anilist_call = 0.0
+
+
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 
 
 def anilist_query(query, variables=None):
+    global _last_anilist_call
+    cache_key = (query, json.dumps(variables or {}, sort_keys=True))
+    if cache_key in _anilist_cache:
+        return _anilist_cache[cache_key]
+    elapsed = time.time() - _last_anilist_call
+    if elapsed < 0.8:
+        time.sleep(0.8 - elapsed)
     data = {"query": query, "variables": variables or {}}
     req = urllib.request.Request(
         ANILIST_API,
@@ -37,19 +48,21 @@ def anilist_query(query, variables=None):
             "User-Agent": "aniterm/1.0",
         },
     )
-    for attempt in range(3):
+    for attempt in range(2):
         try:
             with urllib.request.urlopen(req) as r:
-                return json.loads(r.read())
+                result = json.loads(r.read())
+                _last_anilist_call = time.time()
+                _anilist_cache[cache_key] = result
+                return result
         except urllib.error.HTTPError as e:
             body = e.read().decode()
-            if "1101" in body and attempt < 2:
-                wait = 3 * (attempt + 1)
-                eprint(f"{STYLE_YELLOW}AniList rate limited, waiting {wait}s...{STYLE_RESET}")
-                time.sleep(wait)
+            if "1101" in body and attempt == 0:
+                eprint(f"{STYLE_YELLOW}AniList rate limited, waiting 60s...{STYLE_RESET}")
+                time.sleep(60)
                 continue
             if "1101" in body:
-                eprint(f"{STYLE_RED}AniList rate limit hit. Wait a moment and try again.{STYLE_RESET}")
+                eprint(f"{STYLE_RED}AniList rate limit hit. Wait 1-2 minutes then try again.{STYLE_RESET}")
             else:
                 eprint(f"{STYLE_RED}AniList error ({e.code}). Try again later.{STYLE_RESET}")
             sys.exit(1)
