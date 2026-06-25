@@ -28,7 +28,7 @@ pip install curl_cffi
 
 ```
 aniterm <query>                   Search anime
-aniterm <id>                      Show info + episode list
+aniterm <id>                      Browse episodes interactively
 aniterm <id> <ep>                 Play episode (subbed)
 aniterm <id> <ep> -dub            Play dubbed episode
 aniterm <id> <ep> -n              Next/prev prompt after playback

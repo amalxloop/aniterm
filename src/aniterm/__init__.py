@@ -221,43 +221,40 @@ def fmt_compact(m):
     return " ".join(p)
 
 
+def try_play(anilist_id, episode, sub_or_dub):
+    try:
+        data = fetch_episode_sources(anilist_id, episode, sub_or_dub)
+    except urllib.error.HTTPError as e:
+        eprint(f"{STYLE_RED}Server error: {e.code}{STYLE_RESET}")
+        return False
+    except Exception as e:
+        eprint(f"{STYLE_RED}{e}{STYLE_RESET}")
+        return False
+    if not data.get("success"):
+        eprint(f"{STYLE_RED}{data.get('error', 'Unknown error')}{STYLE_RESET}")
+        return False
+    sources = data.get("sources", [])
+    if not sources or not sources[0].get("file"):
+        eprint(f"{STYLE_RED}No video source found.{STYLE_RESET}")
+        return False
+    url = sources[0]["file"]
+    media = get_anime_info(anilist_id)
+    title = fmt_title(media) if media else f"Anime {anilist_id}"
+    label = f"{title} - Ep {episode} ({sub_or_dub.upper()})"
+    print(f"  {STYLE_GREEN}▶{STYLE_RESET} {STYLE_BOLD}{label}{STYLE_RESET}")
+    play_episode(url, title=label)
+    return True
+
+
 def play(anilist_id, episode, sub_or_dub, loop=False):
     while True:
-        try:
-            data = fetch_episode_sources(anilist_id, episode, sub_or_dub)
-        except urllib.error.HTTPError as e:
-            eprint(f"{STYLE_RED}Server error: {e.code}{STYLE_RESET}")
+        ok = try_play(anilist_id, episode, sub_or_dub)
+        if not ok:
             if not loop:
                 sys.exit(1)
             break
-        except Exception as e:
-            eprint(f"{STYLE_RED}{e}{STYLE_RESET}")
-            if not loop:
-                sys.exit(1)
-            break
-        if not data.get("success"):
-            eprint(f"{STYLE_RED}{data.get('error', 'Unknown error')}{STYLE_RESET}")
-            if not loop:
-                sys.exit(1)
-            break
-        sources = data.get("sources", [])
-        if not sources or not sources[0].get("file"):
-            eprint(f"{STYLE_RED}No video source found.{STYLE_RESET}")
-            if not loop:
-                sys.exit(1)
-            if loop:
-                eprint(f"{STYLE_YELLOW}No more episodes.{STYLE_RESET}")
-                break
-        url = sources[0]["file"]
-        media = get_anime_info(anilist_id)
-        title = fmt_title(media) if media else f"Anime {anilist_id}"
-        label = f"{title} - Ep {episode} ({sub_or_dub.upper()})"
-        print(f"  {STYLE_GREEN}▶{STYLE_RESET} {STYLE_BOLD}{label}{STYLE_RESET}")
-        play_episode(url, title=label)
-
         if not loop:
             break
-
         try:
             choice = input(f"\n{STYLE_BOLD}[n]ext  [p]rev  [q]uit (ep {episode}): {STYLE_RESET}").strip().lower()
         except (EOFError, KeyboardInterrupt):
@@ -280,7 +277,7 @@ def cmd_search(args):
         print(f"{STYLE_CYAN}{i:>3}.{STYLE_RESET} {fmt_compact(m)}")
 
 
-def cmd_info(anilist_id):
+def cmd_info(anilist_id, args):
     media = get_anime_info(anilist_id)
     if not media:
         eprint(f"{STYLE_RED}ID {anilist_id} not found.{STYLE_RESET}")
@@ -291,12 +288,12 @@ def cmd_info(anilist_id):
     y = media.get("seasonYear") or ""
     s = media.get("season") or ""
     print(f"\n{STYLE_BOLD}{title}{STYLE_RESET}")
-    print(f"  ID: {anilist_id} | {f} | {ep or '?'} episodes")
+    print(f"  ID: {anilist_id} | {f} | {ep or '?'} episodes", end="")
     status = media.get("status", "")
     if status == "RELEASING":
-        print(f"  {STYLE_GREEN}● AIRING{STYLE_RESET}", end="")
-    if y: print(f"  {s} {y}", end="")
+        print(f"  {STYLE_GREEN} ● AIRING{STYLE_RESET}", end="")
     print()
+    if y: print(f"  {s} {y}")
     edges = media.get("relations", {}).get("edges", [])
     if edges:
         print()
@@ -307,24 +304,53 @@ def cmd_info(anilist_id):
     print()
     if ep is None:
         print(f"  {STYLE_DIM}(Episode count unknown - specify episode number directly){STYLE_RESET}")
+        return
+    if ep > 500:
+        per_page = 50
     elif ep > 100:
-        cols = 8
-        step = ep // 100
-        ranges = []
-        for i in range(1, ep + 1, step):
-            end = min(i + step - 1, ep)
-            ranges.append(f"{i}-{end}")
-        for i in range(0, len(ranges), cols):
-            print(f"  {'  '.join(f'{STYLE_GREEN}{r:>8}{STYLE_RESET}' for r in ranges[i:i+cols])}")
+        per_page = 30
     else:
-        cols = 8
-        for i in range(1, ep + 1):
-            print(f"{STYLE_GREEN}{i:>4}{STYLE_RESET}", end="")
-            if i % cols == 0:
+        per_page = 24
+    total_pages = (ep + per_page - 1) // per_page
+    page = 0
+    while True:
+        start = page * per_page + 1
+        end = min(start + per_page - 1, ep)
+        cols = 10 if per_page >= 30 else 8
+        print(f"\n{STYLE_DIM}Episodes {start}-{end}/{ep} (page {page+1}/{total_pages}){STYLE_RESET}")
+        for i in range(start, end + 1):
+            print(f"{STYLE_GREEN}{i:>6}{STYLE_RESET}", end="")
+            if (i - start + 1) % cols == 0:
                 print()
-        if ep % cols != 0:
+        if (end - start + 1) % cols != 0:
             print()
-    print(f"\n{STYLE_DIM}Usage: aniterm {anilist_id} <ep>  |  aniterm {anilist_id} <ep> -dub{STYLE_RESET}")
+        try:
+            c = input(f"\n{STYLE_BOLD}[n]ext  [p]rev  /<num>  <ep# to play>  [Enter=q]: {STYLE_RESET}").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if c == "" or c == "q":
+            break
+        elif c == "n":
+            page = min(page + 1, total_pages - 1)
+        elif c == "p":
+            page = max(0, page - 1)
+        elif c.startswith("/"):
+            c = c[1:].strip()
+            if c.isdigit():
+                target = int(c)
+                if 1 <= target <= ep:
+                    page = (target - 1) // per_page
+                else:
+                    eprint(f"{STYLE_RED}Invalid (1-{ep}).{STYLE_RESET}")
+            continue
+        elif c.isdigit():
+            target = int(c)
+            if 1 <= target <= ep:
+                sd = "dub" if args.dub else "sub"
+                try_play(anilist_id, target, sd)
+            else:
+                eprint(f"{STYLE_RED}Invalid (1-{ep}).{STYLE_RESET}")
+                continue
 
 
 def cmd_interactive(args):
@@ -421,7 +447,7 @@ def main():
                 loop = args.next and i == len(episodes) - 1
                 play(anilist_id, ep, sd, loop=loop)
         else:
-            cmd_info(anilist_id)
+            cmd_info(anilist_id, args)
     else:
         args.query = cmd
         cmd_search(args)
