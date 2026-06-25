@@ -358,7 +358,7 @@ def main():
         description=f"{STYLE_BOLD}aniterm{STYLE_RESET} - stream anime from the terminal",
         formatter_class=RawDescriptionHelpFormatter,
     )
-    p.add_argument("command", nargs="*", help="search <query> | <id> [ep...] | -i [query]")
+    p.add_argument("command", nargs="*", help="<query> | <id> [ep...] | -i [query] | search <query>")
     p.add_argument("-d", "--dub", action="store_true", help="dub instead of sub")
     p.add_argument("-i", "--interactive", action="store_true", help="interactive mode")
     p.add_argument("--page", type=int, default=1, help="search page")
