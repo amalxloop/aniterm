@@ -325,15 +325,8 @@ def cmd_info(anilist_id, args):
             sd = "dub" if args.dub else "sub"
             try_play(anilist_id, target, sd)
         else:
-            cols = 8
-            for i in range(1, ep + 1):
-                print(f"{STYLE_GREEN}{i:>4}{STYLE_RESET}", end="")
-                if i % cols == 0:
-                    print()
-            if ep % cols != 0:
-                print()
             try:
-                c = input(f"\n{STYLE_BOLD}Episode to play (Enter=q): {STYLE_RESET}").strip()
+                c = input(f"{STYLE_BOLD}Episode (1-{ep}, Enter=q): {STYLE_RESET}").strip()
             except (EOFError, KeyboardInterrupt):
                 break
             if c == "" or not c.isdigit():
