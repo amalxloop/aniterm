@@ -31,6 +31,7 @@ aniterm <query>                   Search anime
 aniterm <id>                      Show info + episode list
 aniterm <id> <ep>                 Play episode (subbed)
 aniterm <id> <ep> -dub            Play dubbed episode
+aniterm <id> <ep> -n              Next/prev prompt after playback
 aniterm -i <query>                Interactive mode
 aniterm <id> -i                   Pick episode interactively
 ```

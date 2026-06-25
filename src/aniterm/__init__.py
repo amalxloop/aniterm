@@ -221,28 +221,53 @@ def fmt_compact(m):
     return " ".join(p)
 
 
-def play(anilist_id, episode, sub_or_dub):
-    try:
-        data = fetch_episode_sources(anilist_id, episode, sub_or_dub)
-    except urllib.error.HTTPError as e:
-        eprint(f"{STYLE_RED}Server error: {e.code}{STYLE_RESET}")
-        sys.exit(1)
-    except Exception as e:
-        eprint(f"{STYLE_RED}{e}{STYLE_RESET}")
-        sys.exit(1)
-    if not data.get("success"):
-        eprint(f"{STYLE_RED}{data.get('error', 'Unknown error')}{STYLE_RESET}")
-        sys.exit(1)
-    sources = data.get("sources", [])
-    if not sources or not sources[0].get("file"):
-        eprint(f"{STYLE_RED}No video source found.{STYLE_RESET}")
-        sys.exit(1)
-    url = sources[0]["file"]
-    media = get_anime_info(anilist_id)
-    title = fmt_title(media) if media else f"Anime {anilist_id}"
-    label = f"{title} - Ep {episode} ({sub_or_dub.upper()})"
-    print(f"  {STYLE_GREEN}▶{STYLE_RESET} {STYLE_BOLD}{label}{STYLE_RESET}")
-    play_episode(url, title=label)
+def play(anilist_id, episode, sub_or_dub, loop=False):
+    while True:
+        try:
+            data = fetch_episode_sources(anilist_id, episode, sub_or_dub)
+        except urllib.error.HTTPError as e:
+            eprint(f"{STYLE_RED}Server error: {e.code}{STYLE_RESET}")
+            if not loop:
+                sys.exit(1)
+            break
+        except Exception as e:
+            eprint(f"{STYLE_RED}{e}{STYLE_RESET}")
+            if not loop:
+                sys.exit(1)
+            break
+        if not data.get("success"):
+            eprint(f"{STYLE_RED}{data.get('error', 'Unknown error')}{STYLE_RESET}")
+            if not loop:
+                sys.exit(1)
+            break
+        sources = data.get("sources", [])
+        if not sources or not sources[0].get("file"):
+            eprint(f"{STYLE_RED}No video source found.{STYLE_RESET}")
+            if not loop:
+                sys.exit(1)
+            if loop:
+                eprint(f"{STYLE_YELLOW}No more episodes.{STYLE_RESET}")
+                break
+        url = sources[0]["file"]
+        media = get_anime_info(anilist_id)
+        title = fmt_title(media) if media else f"Anime {anilist_id}"
+        label = f"{title} - Ep {episode} ({sub_or_dub.upper()})"
+        print(f"  {STYLE_GREEN}▶{STYLE_RESET} {STYLE_BOLD}{label}{STYLE_RESET}")
+        play_episode(url, title=label)
+
+        if not loop:
+            break
+
+        try:
+            choice = input(f"\n{STYLE_BOLD}[n]ext  [p]rev  [q]uit (ep {episode}): {STYLE_RESET}").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if choice == "n":
+            episode += 1
+        elif choice == "p":
+            episode = max(1, episode - 1)
+        else:
+            break
 
 
 def cmd_search(args):
@@ -349,7 +374,7 @@ def cmd_interactive(args):
         print(); sys.exit(0)
     if sd not in ("sub", "dub"):
         sd = "sub"
-    play(anilist_id, ep, sd)
+    play(anilist_id, ep, sd, loop=True)
 
 
 def main():
@@ -361,6 +386,7 @@ def main():
     p.add_argument("command", nargs="*", help="<query> | <id> [ep...] | -i [query] | search <query>")
     p.add_argument("-d", "--dub", action="store_true", help="dub instead of sub")
     p.add_argument("-i", "--interactive", action="store_true", help="interactive mode")
+    p.add_argument("-n", "--next", action="store_true", help="prompt for next/prev episode after playback")
     p.add_argument("--page", type=int, default=1, help="search page")
 
     args = p.parse_args()
@@ -391,8 +417,9 @@ def main():
         episodes = [int(x) for x in cmd[1:] if x.isdigit()]
         if episodes:
             sd = "dub" if args.dub else "sub"
-            for ep in episodes:
-                play(anilist_id, ep, sd)
+            for i, ep in enumerate(episodes):
+                loop = args.next and i == len(episodes) - 1
+                play(anilist_id, ep, sd, loop=loop)
         else:
             cmd_info(anilist_id)
     else:
