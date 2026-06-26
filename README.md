@@ -6,24 +6,31 @@ Stream anime from your terminal.
 
 - **mpv** — video player
 - **yt-dlp** — streaming
-- **curl_cffi** — `pip install curl_cffi`
+- **curl_cffi** — `pip install aniterm[cloudflare]` (needed for Cloudflare bypass)
 - **python3**
-- **fzf** — recommended for scrollable episode browser
+- **fzf** — recommended for scrollable episode browser (apt/brew/pkg install fzf)
 
 ## Install
 
 ```bash
 pip install aniterm           # from PyPI
-pip install curl_cffi         # needed by yt-dlp for Cloudflare bypass
 ```
 
 Or run directly from the repo:
 
 ```bash
 git clone https://github.com/amalxloop/aniterm.git
-pip install curl_cffi
 ./aniterm/aniterm
 ```
+
+### Termux (Android)
+
+```bash
+pkg install mpv yt-dlp fzf python
+pip install aniterm[cloudflare]
+```
+
+> Without `curl_cffi` (`pip install curl_cffi`), yt-dlp can't bypass Cloudflare — most streams will fail. Install it if possible.
 
 ## Usage
 

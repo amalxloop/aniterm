@@ -1,4 +1,4 @@
-import json, shutil, subprocess, sys, time, urllib.parse, urllib.request
+import json, os, shutil, subprocess, sys, time, urllib.parse, urllib.request
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 _X = bytes([0xa3, 0x7f, 0x4b, 0xd9, 0x15, 0x82, 0xec, 0x56])
@@ -180,12 +180,12 @@ def play_episode(stream_url, title=None):
         eprint(f"{STYLE_RED}mpv not found. Install it first.{STYLE_RESET}")
         sys.exit(1)
     proxy_url = make_proxy_url(stream_url)
-    cmd = [
-        "mpv", proxy_url,
-        "--msg-level=all=info",
-        "--ytdl-format=bestvideo+bestaudio/best",
-        "--ytdl-raw-options=impersonate=Chrome-142",
-    ]
+    cmd = ["mpv", proxy_url, "--msg-level=all=info", "--ytdl-format=bestvideo+bestaudio/best"]
+    try:
+        import curl_cffi
+        cmd.append("--ytdl-raw-options=impersonate=Chrome-142")
+    except ImportError:
+        pass
     if title:
         cmd.append(f"--title={title}")
     subprocess.run(cmd)
