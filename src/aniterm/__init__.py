@@ -181,6 +181,8 @@ def play_episode(stream_url, title=None):
         sys.exit(1)
     proxy_url = make_proxy_url(stream_url)
     cmd = ["mpv", proxy_url, "--msg-level=all=info", "--ytdl-format=bestvideo+bestaudio/best"]
+    if "ANDROID_ROOT" in os.environ:
+        cmd.extend(["--vo=mediacodec", "--hwdec=mediacodec-copy"])
     try:
         import curl_cffi
         cmd.append("--ytdl-raw-options=impersonate=Chrome-142")
