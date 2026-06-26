@@ -30,7 +30,7 @@ pkg install mpv yt-dlp fzf python
 pip install aniterm[cloudflare]
 ```
 
-> Without `curl_cffi` (`pip install curl_cffi`), yt-dlp can't bypass Cloudflare — most streams will fail. Install it if possible.
+If your mpv doesn't support video (only `null` VO), aniterm auto-detects and opens the stream in Android's native video player.
 
 ## Usage
 

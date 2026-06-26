@@ -180,16 +180,22 @@ def _android_check_vo():
     return "null" in result.stdout and "mediacodec" not in result.stdout
 
 
+def _android_play_intent(stream_url):
+    """Fallback: open stream in Android's native video player."""
+    eprint(f"{STYLE_YELLOW}Opening in Android video player...{STYLE_RESET}")
+    proxy_url = make_proxy_url(stream_url)
+    cmd = ["am", "start", "-a", "android.intent.action.VIEW",
+           "-d", proxy_url, "-t", "video/*"]
+    subprocess.run(cmd, capture_output=True)
+
+
 def play_episode(stream_url, title=None):
     if not shutil.which("mpv"):
         eprint(f"{STYLE_RED}mpv not found. Install it first.{STYLE_RESET}")
         sys.exit(1)
     if "ANDROID_ROOT" in os.environ and _android_check_vo():
-        eprint(f"{STYLE_YELLOW}Your Termux mpv has no video support.{STYLE_RESET}")
-        eprint(f"{STYLE_YELLOW}Install mpv from x11-repo:{STYLE_RESET}")
-        eprint(f"  pkg install x11-repo && pkg install mpv")
-        eprint(f"{STYLE_YELLOW}Then use Termux:X11 or a VNC app for display.{STYLE_RESET}")
-        sys.exit(1)
+        _android_play_intent(stream_url)
+        return
     proxy_url = make_proxy_url(stream_url)
     cmd = ["mpv", proxy_url, "--msg-level=all=info", "--ytdl-format=bestvideo+bestaudio/best"]
     if "ANDROID_ROOT" in os.environ:
