@@ -13,7 +13,9 @@ Stream anime from your terminal.
 ## Install
 
 ```bash
-pip install aniterm           # from PyPI
+pip install aniterm                    # from PyPI
+pip install --upgrade aniterm          # update to latest
+pip install aniterm[cloudflare]        # with Cloudflare bypass
 ```
 
 Or run directly from the repo:
@@ -57,3 +59,4 @@ aniterm -i "attack on titan"      # interactive
 ## Notes
 
 - Episode counts for ongoing anime (e.g. One Piece) are derived from AniList's `nextAiringEpisode` data
+- Transient 502 errors from the stream source are retried automatically (3 attempts with exponential backoff)
