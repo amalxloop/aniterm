@@ -253,11 +253,19 @@ def fmt_compact(m):
 def try_play(anilist_id, episode, sub_or_dub):
     try:
         data = fetch_episode_sources(anilist_id, episode, sub_or_dub)
-    except urllib.error.HTTPError as e:
-        eprint(f"{STYLE_RED}Server error: {e.code}{STYLE_RESET}")
-        return False
     except Exception as e:
-        eprint(f"{STYLE_RED}{e}{STYLE_RESET}")
+        msg = str(e)
+        if sub_or_dub == "dub" and ("502" in msg or "Dub not available" in msg):
+            eprint(f"{STYLE_YELLOW}Dub not available for this anime.{STYLE_RESET}")
+            if sys.stdin.isatty():
+                try:
+                    choice = input(f"{STYLE_BOLD}Try sub instead? [Y/n]: {STYLE_RESET}").strip().lower()
+                except (EOFError, KeyboardInterrupt):
+                    choice = "n"
+                if choice in ("", "y", "yes"):
+                    return try_play(anilist_id, episode, "sub")
+        else:
+            eprint(f"{STYLE_RED}{msg}{STYLE_RESET}")
         return False
     if not data.get("success"):
         eprint(f"{STYLE_RED}{data.get('error', 'Unknown error')}{STYLE_RESET}")
