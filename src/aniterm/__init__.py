@@ -1,4 +1,4 @@
-import json, os, shutil, subprocess, sys, time, urllib.parse, urllib.request
+import json, os, shutil, subprocess, sys, tempfile, time, urllib.parse, urllib.request
 from argparse import ArgumentParser, RawDescriptionHelpFormatter
 
 _X = bytes([0xa3, 0x7f, 0x4b, 0xd9, 0x15, 0x82, 0xec, 0x56])
@@ -199,6 +199,19 @@ def _android_play_intent(stream_url):
     subprocess.run(cmd, capture_output=True)
 
 
+def _download_subtitle(url):
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
+        "Referer": "https://megaplay.buzz/",
+    })
+    with urllib.request.urlopen(req) as resp:
+        data = resp.read()
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".vtt")
+    tmp.write(data)
+    tmp.close()
+    return tmp.name
+
+
 def play_episode(stream_url, title=None, subtitle_urls=None):
     if not shutil.which("mpv"):
         eprint(f"{STYLE_RED}mpv not found. Install it first.{STYLE_RESET}")
@@ -208,9 +221,15 @@ def play_episode(stream_url, title=None, subtitle_urls=None):
         return
     proxy_url = make_proxy_url(stream_url)
     cmd = ["mpv", proxy_url, "--msg-level=all=info", "--ytdl-format=bestvideo+bestaudio/best"]
+    sub_files = []
     if subtitle_urls:
         for url in subtitle_urls:
-            cmd.extend(["--sub-file", url])
+            try:
+                f = _download_subtitle(url)
+                sub_files.append(f)
+                cmd.append(f"--sub-file={f}")
+            except Exception:
+                pass
     if "ANDROID_ROOT" in os.environ:
         cmd.extend(["--vo=mediacodec", "--hwdec=mediacodec-copy"])
     try:
@@ -221,6 +240,11 @@ def play_episode(stream_url, title=None, subtitle_urls=None):
     if title:
         cmd.append(f"--title={title}")
     subprocess.run(cmd)
+    for f in sub_files:
+        try:
+            os.unlink(f)
+        except Exception:
+            pass
 
 
 def fmt_title(m):
