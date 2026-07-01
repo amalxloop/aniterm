@@ -146,11 +146,12 @@ def fetch_episode_sources(anilist_id, episode, sub_or_dub="sub"):
             with urllib.request.urlopen(req, timeout=15) as r:
                 return decrypt_vidnest(json.loads(r.read()))
         except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")[:200]
             if e.code == 502 and attempt < 2:
                 eprint(f"  {STYLE_YELLOW}502, retrying...{STYLE_RESET}")
                 time.sleep(2 ** attempt)
                 continue
-            raise
+            raise Exception(f"HTTP {e.code}: {body}")
 
 
 def make_proxy_url(stream_url):
