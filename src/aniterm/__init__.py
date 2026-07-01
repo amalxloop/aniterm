@@ -202,7 +202,7 @@ def _android_play_intent(stream_url):
 def _download_subtitle(url):
     req = urllib.request.Request(url, headers={
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:137.0) Gecko/20100101 Firefox/137.0",
-        "Referer": "https://megaplay.buzz/",
+        "Referer": _x("cb0b3fa966b8c379ce1a2cb865ee8d2f8d1d3ea36fad"),
     })
     with urllib.request.urlopen(req) as resp:
         data = resp.read()
