@@ -220,7 +220,7 @@ def play_episode(stream_url, title=None, subtitle_urls=None):
         _android_play_intent(stream_url)
         return
     proxy_url = make_proxy_url(stream_url)
-    cmd = ["mpv", proxy_url, "--msg-level=all=info", "--ytdl-format=bestvideo+bestaudio/best"]
+    cmd = ["mpv", proxy_url, "--msg-level=all=warn", "--ytdl-format=bestvideo+bestaudio/best"]
     sub_files = []
     if subtitle_urls:
         for url in subtitle_urls:
