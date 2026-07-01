@@ -199,7 +199,7 @@ def _android_play_intent(stream_url):
     subprocess.run(cmd, capture_output=True)
 
 
-def play_episode(stream_url, title=None):
+def play_episode(stream_url, title=None, subtitle_urls=None):
     if not shutil.which("mpv"):
         eprint(f"{STYLE_RED}mpv not found. Install it first.{STYLE_RESET}")
         sys.exit(1)
@@ -208,6 +208,9 @@ def play_episode(stream_url, title=None):
         return
     proxy_url = make_proxy_url(stream_url)
     cmd = ["mpv", proxy_url, "--msg-level=all=info", "--ytdl-format=bestvideo+bestaudio/best"]
+    if subtitle_urls:
+        for url in subtitle_urls:
+            cmd.extend(["--sub-file", url])
     if "ANDROID_ROOT" in os.environ:
         cmd.extend(["--vo=mediacodec", "--hwdec=mediacodec-copy"])
     try:
@@ -275,11 +278,13 @@ def try_play(anilist_id, episode, sub_or_dub):
         eprint(f"{STYLE_RED}No video source found.{STYLE_RESET}")
         return False
     url = sources[0]["file"]
+    tracks = data.get("tracks", [])
+    sub_urls = [t["file"] for t in tracks if t.get("file") and t.get("kind") in ("captions", "subtitles")]
     media = get_anime_info(anilist_id)
     title = fmt_title(media) if media else f"Anime {anilist_id}"
     label = f"{title} - Ep {episode} ({sub_or_dub.upper()})"
     print(f"  {STYLE_GREEN}▶{STYLE_RESET} {STYLE_BOLD}{label}{STYLE_RESET}")
-    play_episode(url, title=label)
+    play_episode(url, title=label, subtitle_urls=sub_urls or None)
     return True
 
 
