@@ -60,3 +60,4 @@ aniterm -i "attack on titan"      # interactive
 
 - Episode counts for ongoing anime (e.g. One Piece) are derived from AniList's `nextAiringEpisode` data
 - Transient 502 errors from the stream source are retried automatically (3 attempts with exponential backoff)
+- `-dub` may be unavailable for some anime; returns a clear error message if so

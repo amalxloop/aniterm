@@ -134,23 +134,32 @@ def decrypt_vidnest(data):
     return json.loads(custom_b64_decode(data["data"]).decode("utf-8"))
 
 
+NEG_CACHE = set()
+
+
 def fetch_episode_sources(anilist_id, episode, sub_or_dub="sub"):
+    key = (anilist_id, episode, sub_or_dub)
+    if key in NEG_CACHE:
+        raise Exception(f"HTTP 502: Dub not available for this anime")
     url = f"{VIDNEST_API}/{anilist_id}/{episode}/{sub_or_dub.lower()}"
     ua = _x("ee1031b079ee8d7996517bf93dd58538c7103caa35ccb876924f65e92ea2bb3fcd497fe235fada62985f39af2fb3df618d4f62f952e78f3dcc5079e924b2dc67934e6b9f7cf08930cc0764e826b5c266")
     ori = _x("cb0b3fa966b8c379d5162fb770f19878c50a25")
     ref = _x("cb0b3fa966b8c379d5162fb770f19878c50a25f6")
     headers = {"User-Agent": ua, "Origin": ori, "Referer": ref}
-    for attempt in range(3):
+    for attempt in range(3 if sub_or_dub == "sub" else 1):
         try:
             req = urllib.request.Request(url, headers=headers)
             with urllib.request.urlopen(req, timeout=15) as r:
                 return decrypt_vidnest(json.loads(r.read()))
         except urllib.error.HTTPError as e:
-            body = e.read().decode(errors="replace")[:200]
+            if e.code == 502 and sub_or_dub == "dub":
+                NEG_CACHE.add(key)
+                raise Exception(f"HTTP 502: Dub not available for this anime")
             if e.code == 502 and attempt < 2:
                 eprint(f"  {STYLE_YELLOW}502, retrying...{STYLE_RESET}")
                 time.sleep(2 ** attempt)
                 continue
+            body = e.read().decode(errors="replace")[:200]
             raise Exception(f"HTTP {e.code}: {body}")
 
 
